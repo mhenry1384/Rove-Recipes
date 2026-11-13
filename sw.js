@@ -21,7 +21,9 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(SHELL.map((p) => new Request(p, { cache: 'no-store' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -32,8 +34,8 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network first (so edits show up right away), falling back to cache when
-// offline or when the network is slow.
+// Always fetch the latest files from the server, skipping the browser's HTTP
+// cache too. The saved copy is used only when the network fails (offline).
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -41,19 +43,15 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const cacheKey = req.mode === 'navigate' ? 'index.html' : req;
-    const network = fetch(req).then((res) => {
+    const cacheKey = req.mode === 'navigate' ? 'index.html' : url.pathname;
+    try {
+      const res = await fetch(url.href, { cache: 'no-store', credentials: 'same-origin' });
       if (res.ok) cache.put(cacheKey, res.clone());
       return res;
-    });
-    try {
-      return await Promise.race([
-        network,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
-      ]);
-    } catch {
-      const cached = await cache.match(cacheKey, { ignoreSearch: req.mode === 'navigate' });
-      return cached || network; // nothing cached: keep waiting on the network
+    } catch (err) {
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+      throw err;
     }
   })());
 });

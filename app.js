@@ -599,7 +599,7 @@
   window.addEventListener('offline', () => setStatus('Offline — showing saved recipes'));
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(console.error));
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(console.error));
   }
 
   document.getElementById('version').textContent = 'v' + (window.APP_VERSION ?? '?');
