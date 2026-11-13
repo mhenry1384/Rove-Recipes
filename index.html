@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rove Recipes</title>
+  <meta name="description" content="Recipe viewer backed by Google Drive">
+  <meta name="theme-color" content="#9a3412">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="28" height="28">
+      <span>Rove Recipes</span>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <button id="sync-btn" class="btn" type="button">Sign in</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="Recipe list">
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search recipes…" autocomplete="off"
+               spellcheck="false" aria-label="Search recipes">
+        <div class="controls-row">
+          <span id="count" class="muted"></span>
+          <label class="sort">Sort
+            <select id="sort">
+              <option value="name">A–Z</option>
+              <option value="recent">Recently made</option>
+              <option value="stale">Not made lately</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <ul id="list" class="list"></ul>
+    </aside>
+
+    <main id="detail" class="detail" tabindex="-1"></main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="vendor/marked.min.js"></script>
+  <script src="vendor/purify.min.js"></script>
+  <script src="app.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async
+          onload="window.__gisLoaded = true; window.dispatchEvent(new Event('gis-loaded'))"></script>
+</body>
+</html>
