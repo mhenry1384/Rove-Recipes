@@ -1,7 +1,7 @@
 // Service worker: caches the app shell so the app opens offline.
 // Recipes themselves are cached by app.js in localStorage.
 // Bump CACHE when shipping changes so old caches are cleared.
-const CACHE = 'rove-recipes-v1';
+const CACHE = 'rove-recipes-v2';
 const SHELL = [
   './',
   'index.html',

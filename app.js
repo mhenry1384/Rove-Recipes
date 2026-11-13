@@ -23,13 +23,15 @@
     lastMade: store.get('lastMade', {}),        // name -> 'YYYY-MM-DD' (as last read from Drive)
     pending: store.get('pending', {}),          // name -> 'YYYY-MM-DD' | '' (cleared) — not yet saved to Drive
     lastMadeFileId: store.get('lastMadeFileId', null),
-    folderId: CFG.FOLDER_ID || store.get('folderId', null),
+    folderId: CFG.FOLDER_ID || store.get('folderId2', null),
+    folderName: null,
     lastSync: store.get('lastSync', 0),
     sort: store.get('sort', 'name'),
     wake: store.get('wake', true),
     query: '',
   };
-  let token = store.get('token', null);         // {value, exp}
+  let token = store.get('token', null);         // {value, exp, full}
+  if (token && !token.full) token = null;       // older token without verified Drive scopes
 
   const $ = (s) => document.querySelector(s);
   const els = {
@@ -84,6 +86,7 @@
   // ---------- Google auth ----------
   class AuthError extends Error {}
   let tokenClient = null;
+  let needConsent = false;
   const tokenValid = () => !!token && token.exp > Date.now() + 60_000;
 
   function initTokenClient() {
@@ -106,7 +109,12 @@
       if (!tokenClient) return reject(new Error('Google sign-in is still loading (or you are offline)'));
       tokenClient.callback = (resp) => {
         if (resp.error) return reject(new AuthError(resp.error_description || resp.error));
-        token = { value: resp.access_token, exp: Date.now() + Number(resp.expires_in) * 1000 };
+        if (!google.accounts.oauth2.hasGrantedAllScopes(resp, ...SCOPES.split(' '))) {
+          needConsent = true;
+          return reject(new AuthError('Google Drive access was not fully allowed — tap Sign in and tick both boxes'));
+        }
+        needConsent = false;
+        token = { value: resp.access_token, exp: Date.now() + Number(resp.expires_in) * 1000, full: true };
         store.set('token', token);
         store.set('signedInOnce', true);
         renderAuth();
@@ -114,7 +122,7 @@
       };
       tokenClient.error_callback = (err) => reject(new AuthError(
         err?.type === 'popup_closed' ? 'Sign-in window was closed' : (err?.message || 'Sign-in failed')));
-      tokenClient.requestAccessToken({ prompt: '' });
+      tokenClient.requestAccessToken({ prompt: needConsent ? 'consent' : '' });
     });
   }
 
@@ -156,10 +164,19 @@
     if (state.folderId) return state.folderId;
     const name = CFG.FOLDER_NAME || 'Recipes';
     const folders = await listFiles(
-      `mimeType='application/vnd.google-apps.folder' and name='${qstr(name)}' and trashed=false`, 'id,name');
-    if (!folders.length) throw new Error(`No Drive folder named "${name}" — set FOLDER_ID in config.js`);
-    state.folderId = folders[0].id;
-    store.set('folderId', state.folderId);
+      `mimeType='application/vnd.google-apps.folder' and name='${qstr(name)}' and trashed=false`, 'id,name,ownedByMe');
+    if (!folders.length) throw new Error(`No Drive folder named "${name}" found — set FOLDER_ID in config.js`);
+    // Several folders can share the name; pick the one with the most .md files (prefer ones you own).
+    const scored = await mapLimit(folders, 4, async (f) => {
+      const kids = await listFiles(`'${f.id}' in parents and trashed=false`, 'id,name');
+      return { f, count: kids.filter((k) => /\.md$/i.test(k.name)).length };
+    });
+    scored.sort((a, b) => (b.count - a.count) || (Number(!!b.f.ownedByMe) - Number(!!a.f.ownedByMe)));
+    if (!scored[0].count) {
+      throw new Error(`Found ${folders.length} folder(s) named "${name}" but none contain .md files — set FOLDER_ID in config.js`);
+    }
+    state.folderId = scored[0].f.id;
+    store.set('folderId2', state.folderId);
     return state.folderId;
   }
 
@@ -190,6 +207,10 @@
 
       const known = new Map(state.recipes.map((r) => [r.id, r]));
       const md = files.filter((f) => /\.md$/i.test(f.name));
+      if (!md.length) {
+        if (!CFG.FOLDER_ID) { state.folderId = null; store.del('folderId2'); } // re-detect next time
+        throw new Error('No .md recipe files found in the Drive folder');
+      }
       const recipes = await mapLimit(md, 6, async (f) => {
         const name = f.name.replace(/\.md$/i, '');
         const old = known.get(f.id);
@@ -391,7 +412,7 @@
     const name = currentName();
     document.body.classList.toggle('has-recipe', !!name);
     const recipe = name && state.recipes.find((r) => r.name === name);
-    const key = recipe ? recipe.id + recipe.modifiedTime : `empty:${name}:${state.recipes.length}:${CONFIGURED}`;
+    const key = recipe ? recipe.id + recipe.modifiedTime : `empty:${name}:${state.recipes.length}:${CONFIGURED}:${tokenValid()}`;
 
     if (key !== renderedKey) {
       renderedKey = key;
@@ -412,6 +433,9 @@
       div.append(p);
     } else if (!CONFIGURED) {
       div.innerHTML = '<h2>Setup needed</h2><p>Put your Google OAuth client ID in <code>config.js</code>. See README.md for the steps.</p>';
+    } else if (!state.recipes.length && tokenValid()) {
+      div.innerHTML = '<h2>No recipes yet</h2><p class="muted">Signed in, but no recipes were loaded. ' +
+        'Check the message at the top of the screen, then tap Sync to try again.</p>';
     } else if (!state.recipes.length) {
       div.innerHTML = '<h2>Welcome</h2><p>Sign in with Google to load your recipes from Drive.</p>';
       const b = document.createElement('button');
