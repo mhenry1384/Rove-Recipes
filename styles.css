@@ -204,12 +204,33 @@ button, input, select { font: inherit; color: inherit; }
 }
 .unsynced { color: var(--muted); font-style: italic; }
 
-/* ---------- phone / narrow: one pane at a time ---------- */
-@media (max-width: 799px) {
-  .sidebar, .detail { position: absolute; inset: 0; width: auto; border-right: none; }
-  .detail { visibility: hidden; background: var(--bg); }
-  body.has-recipe .detail { visibility: visible; }
-  body.has-recipe .sidebar { visibility: hidden; }
+/* ---------- phone & portrait tablet: list collapses while a recipe is open ---------- */
+/* Keep this query in sync with NARROW_QUERY in app.js. */
+.scrim { display: none; }
+@media (max-width: 799px), (max-width: 1100px) and (orientation: portrait) {
+  /* No recipe open: the list fills the screen. */
+  .sidebar { position: absolute; inset: 0; width: auto; border-right: none; z-index: 3; }
+  .detail { display: none; }
+
+  /* Recipe open: the list becomes a slide-in drawer opened by "☰ Recipes". */
+  body.has-recipe .detail { display: block; }
+  body.has-recipe .sidebar {
+    right: auto;
+    width: min(380px, 88vw);
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 24px rgb(0 0 0 / 0.2);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+  body.has-recipe.drawer-open .sidebar { transform: none; visibility: visible; }
+  body.has-recipe.drawer-open .scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: rgb(0 0 0 / 0.35);
+  }
   .toolbar .back { display: inline-block; }
   .recipe, .placeholder { padding-left: 16px; padding-right: 16px; }
   .recipe h1 { font-size: 1.75rem; }

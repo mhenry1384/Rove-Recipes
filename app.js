@@ -406,7 +406,16 @@
     return m ? decodeURIComponent(m[1]) : null;
   };
   let renderedKey = null;
-  let cameFromList = false;
+
+  // Must match the narrow-layout media query in styles.css.
+  const NARROW_QUERY = '(max-width: 799px), (max-width: 1100px) and (orientation: portrait)';
+  const isNarrow = () => matchMedia(NARROW_QUERY).matches;
+
+  function setDrawer(open) {
+    document.body.classList.toggle('drawer-open', open);
+    for (const b of document.querySelectorAll('.toolbar .back')) b.setAttribute('aria-expanded', String(open));
+    if (open) els.list.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+  }
 
   function renderDetail() {
     const name = currentName();
@@ -452,13 +461,14 @@
   function toolbar() {
     const bar = document.createElement('div');
     bar.className = 'toolbar';
+    // Shown only on narrow screens (phone, portrait tablet): slides the recipe list back in.
     const back = document.createElement('button');
     back.className = 'btn back';
     back.type = 'button';
-    back.textContent = '‹ Recipes';
-    back.addEventListener('click', () => {
-      if (cameFromList) history.back(); else location.hash = '';
-    });
+    back.textContent = '☰ Recipes';
+    back.setAttribute('aria-controls', 'sidebar');
+    back.setAttribute('aria-expanded', 'false');
+    back.addEventListener('click', () => setDrawer(!document.body.classList.contains('drawer-open')));
     const right = document.createElement('div');
     right.className = 'toolbar-right';
     bar.append(back, right);
@@ -571,23 +581,28 @@
   els.search.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const first = visibleRecipes()[0];
-      if (first) { cameFromList = true; location.hash = 'r=' + encodeURIComponent(first.r.name); }
-    } else if (e.key === 'Escape') {
+      if (first) { location.hash = 'r=' + encodeURIComponent(first.r.name); setDrawer(false); }
+    } else if (e.key === 'Escape' && els.search.value) {
+      e.stopPropagation();
       els.search.value = ''; state.query = ''; renderList();
     }
   });
 
-  els.list.addEventListener('click', (e) => { if (e.target.closest('a.item')) cameFromList = true; });
+  // Picking a recipe (even the one already open) collapses the list on narrow screens.
+  els.list.addEventListener('click', (e) => { if (e.target.closest('a.item')) setDrawer(false); });
+  $('#scrim').addEventListener('click', () => setDrawer(false));
 
   window.addEventListener('hashchange', () => {
-    if (!currentName()) cameFromList = false;
+    setDrawer(false);
     render();
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === '/' && document.activeElement !== els.search && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) {
+    if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) {
+      setDrawer(false);
+    } else if (e.key === '/' && document.activeElement !== els.search && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) {
       e.preventDefault();
-      if (currentName() && matchMedia('(max-width: 799px)').matches) location.hash = '';
+      if (currentName() && isNarrow()) setDrawer(true);
       els.search.focus();
     }
   });
