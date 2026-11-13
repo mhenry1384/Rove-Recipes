@@ -1,7 +1,7 @@
 // Rove Recipes configuration — see README.md for how to get these values.
 window.APP_CONFIG = {
   // OAuth 2.0 Web client ID from Google Cloud Console.
-  CLIENT_ID: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
+  CLIENT_ID: '85196149654-lbmv4jlak35f8cfjesur7hrqo7vidkmm.apps.googleusercontent.com',
 
   // ID of the Drive folder holding the .md recipes (the long string at the end of
   // the folder's URL in drive.google.com). If left blank, the app looks for a
