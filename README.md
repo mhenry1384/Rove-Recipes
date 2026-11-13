@@ -67,4 +67,4 @@ or `python -m http.server 8080`, then open <http://localhost:8080>.
 
 - Google sign-in tokens last about an hour. Recipes stay readable without one. When the token has expired, tapping **Sync** or **I made this today** signs you back in, usually without asking anything.
 - Only recipes that changed in Drive are downloaded again on each sync.
-- **Releasing updates:** after changing any app file, increase `CACHE` in `sw.js` (for example to `rove-recipes-v2`) so installed copies clear their old cache.
+- **Releasing updates:** increase `APP_VERSION` in `version.js` on every push. The number appears next to the app name, and it also names the service-worker cache, so installed copies drop their old files.

@@ -602,6 +602,8 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(console.error));
   }
 
+  document.getElementById('version').textContent = 'v' + (window.APP_VERSION ?? '?');
+
   render();
   renderAuth();
   sync();

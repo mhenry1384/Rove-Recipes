@@ -62,6 +62,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 10px; font: 600 1.15rem var(--serif); white-space: nowrap; }
 .brand img { border-radius: 7px; }
+.version { font: 400 0.75rem var(--sans); color: var(--muted); margin-left: -4px; align-self: flex-end; padding-bottom: 3px; }
 .status {
   flex: 1;
   min-width: 0;
@@ -200,7 +201,8 @@ button, input, select { font: inherit; color: inherit; }
   .toolbar .back { display: inline-block; }
   .recipe, .placeholder { padding-left: 16px; padding-right: 16px; }
   .recipe h1 { font-size: 1.75rem; }
-  .brand span { display: none; }
+  .brand-name { display: none; }
+  .version { margin-left: 0; }
 }
 @media (min-width: 1200px) {
   .sidebar { width: 380px; }
