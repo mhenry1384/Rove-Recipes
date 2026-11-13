@@ -459,7 +459,9 @@
     back.addEventListener('click', () => {
       if (cameFromList) history.back(); else location.hash = '';
     });
-    bar.append(back);
+    const right = document.createElement('div');
+    right.className = 'toolbar-right';
+    bar.append(back, right);
     if ('wakeLock' in navigator) {
       const wake = document.createElement('button');
       wake.className = 'btn toggle';
@@ -472,7 +474,7 @@
         wake.setAttribute('aria-pressed', String(state.wake));
         updateWakeLock();
       });
-      bar.append(wake);
+      right.append(wake);
     }
     return bar;
   }
@@ -490,15 +492,16 @@
       article.prepend(h1);
     }
     for (const a of article.querySelectorAll('a[href]')) { a.target = '_blank'; a.rel = 'noopener'; }
-    const bar = document.createElement('div');
+    // Collapsed "last made" dropdown, right-aligned just under "Keep screen on".
+    const bar = document.createElement('details');
     bar.className = 'made';
     bar.id = 'made-bar';
-    article.querySelector('h1').after(bar);
+    wrap.querySelector('.toolbar-right').append(bar);
     if (!recipe.text.replace(/^#.*$/m, '').trim()) {
       const p = document.createElement('p');
       p.className = 'muted';
       p.textContent = 'This recipe is empty.';
-      bar.after(p);
+      article.querySelector('h1').after(p);
     }
     wrap.append(article);
     return wrap;
@@ -511,38 +514,36 @@
     const today = todayStr();
     const unsynced = name in state.pending;
 
-    const text = document.createElement('div');
-    text.className = 'made-text';
-    text.innerHTML = '<strong>Last made:</strong> ';
-    text.append(made ? `${formatDate(made)} (${relative(made)})` : 'never');
-    if (unsynced) {
-      const s = document.createElement('span');
-      s.className = 'unsynced';
-      s.textContent = ' · not saved to Drive yet';
-      text.append(s);
-    }
+    const summary = document.createElement('summary');
+    summary.textContent = made ? `Made ${relative(made)}` : 'Never made';
 
-    const actions = document.createElement('div');
-    actions.className = 'made-actions';
+    const panel = document.createElement('div');
+    panel.className = 'made-panel';
+    const when = document.createElement('div');
+    when.textContent = made ? `Last made ${formatDate(made)}` : 'Not made yet';
+    panel.append(when);
+    if (unsynced) {
+      const s = document.createElement('div');
+      s.className = 'unsynced';
+      s.textContent = 'Not saved to Drive yet';
+      panel.append(s);
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn primary';
     btn.textContent = made === today ? 'Made today ✓' : 'I made this today';
     btn.disabled = made === today;
-    btn.addEventListener('click', () => setLastMade(name, today));
-    const label = document.createElement('label');
-    label.className = 'pick';
-    label.textContent = 'or date ';
-    const input = document.createElement('input');
-    input.type = 'date';
-    input.value = made || '';
-    input.max = today;
-    input.addEventListener('change', () => setLastMade(name, input.value));
-    label.append(input);
-    actions.append(btn, label);
+    btn.addEventListener('click', () => { bar.open = false; setLastMade(name, today); });
+    panel.append(btn);
 
-    bar.replaceChildren(text, actions);
+    bar.replaceChildren(summary, panel);
   }
+
+  // Clicking anywhere else closes the "last made" dropdown.
+  document.addEventListener('click', (e) => {
+    const bar = document.getElementById('made-bar');
+    if (bar?.open && !bar.contains(e.target)) bar.open = false;
+  });
 
   // ---------- screen wake lock (keeps the screen on while a recipe is open) ----------
   let wakeLock = null;
