@@ -198,7 +198,7 @@
   async function doSync() {
     if (!CONFIGURED) return;
     if (!navigator.onLine) { setStatus('Offline — showing saved recipes'); return; }
-    if (!tokenValid()) { renderAuth(); setStatus(state.recipes.length ? 'Tap Sync to check for changes' : ''); return; }
+    if (!tokenValid()) { renderAuth(); setStatus(''); return; }
     setStatus('Syncing…');
     renderAuth();
     try {
